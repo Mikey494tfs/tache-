@@ -4,13 +4,472 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tachemike Workout Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+        h1, h2 { color: #0056b3; }
+        .container { max-width: 900px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        form div { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="date"], input[type="number"] {
+            width: calc(100% - 22px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .delete-btn { background-color: #dc3545; }
+        .delete-btn:hover { background-color: #c82333; }
+        .edit-btn { background-color: #ffc107; color: #333; }
+        .edit-btn:hover { background-color: #e0a800; }
+        .workout-item {
+            background: #e9ecef;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .workout-item h3 { margin-top: 0; color: #007bff; }
+        .workout-item ul { list-style: none; padding: 0; margin-top: 10px; }
+        .workout-item ul li { background: #f8f9fa; padding: 8px; margin-bottom: 5px; border-radius: 3px; border: 1px solid #e2e6ea; }
+        .exercise-fields { border: 1px dashed #ccc; padding: 10px; margin-top: 10px; border-radius: 5px; }
+        .exercise-fields div { margin-bottom: 5px; }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to Tachemike Workout Tracker!</h1>
-    <p>Index page.</p>
-    <ul>
-        <li><a href="/api/workouts">/api/workouts</a></li>
-        <li><a href="/api/exercises">/api/exercises</a></li>
-    </ul>
+<div class="container">
+    <h1>Tachemike Workout Tracker</h1>
+
+    <h2>Add New Workout</h2>
+    <form id="addWorkoutForm">
+        <div>
+            <label for="workoutName">Workout Name:</label>
+            <input type="text" id="workoutName" required>
+        </div>
+        <div>
+            <label for="workoutDate">Date:</label>
+            <input type="date" id="workoutDate" required>
+        </div>
+        <div>
+            <label for="workoutDuration">Duration (minutes):</label>
+            <input type="number" id="workoutDuration" min="1" required>
+        </div>
+
+        <h3>Exercises</h3>
+        <div id="exercisesContainer">
+            <div class="exercise-fields">
+                <h4>Exercise 1</h4>
+                <div>
+                    <label for="exerciseName_0">Name:</label>
+                    <input type="text" class="exercise-name" id="exerciseName_0" required>
+                </div>
+                <div>
+                    <label for="exerciseSets_0">Sets:</label>
+                    <input type="number" class="exercise-sets" id="exerciseSets_0" min="1" required>
+                </div>
+                <div>
+                    <label for="exerciseReps_0">Reps:</label>
+                    <input type="number" class="exercise-reps" id="exerciseReps_0" min="1" required>
+                </div>
+                <div>
+                    <label for="exerciseWeight_0">Weight:</label>
+                    <input type="number" class="exercise-weight" id="exerciseWeight_0" min="0" step="0.1" required>
+                </div>
+            </div>
+        </div>
+        <button type="button" id="addExerciseBtn">Add Another Exercise</button>
+        <br><br>
+        <button type="submit">Add Workout</button>
+    </form>
+
+    <h2>Your Workouts</h2>
+    <div id="workoutsList">
+        <p>Loading workouts...</p>
+    </div>
+</div>
+
+<!-- Edit Workout Modal -->
+<div id="editWorkoutModal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2>Edit Workout</h2>
+        <form id="editWorkoutForm">
+            <input type="hidden" id="editWorkoutId">
+            <div>
+                <label for="editWorkoutName">Workout Name:</label>
+                <input type="text" id="editWorkoutName" required>
+            </div>
+            <div>
+                <label for="editWorkoutDate">Date:</label>
+                <input type="date" id="editWorkoutDate" required>
+            </div>
+            <div>
+                <label for="editWorkoutDuration">Duration (minutes):</label>
+                <input type="number" id="editWorkoutDuration" min="1" required>
+            </div>
+
+            <h3>Exercises</h3>
+            <div id="editExercisesContainer">
+                <!-- Dynamic exercise fields will be loaded here -->
+            </div>
+            <button type="button" id="addEditExerciseBtn">Add Another Exercise</button>
+            <br><br>
+            <button type="submit">Update Workout</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let exerciseCounter = 1; // For adding new exercises to the add form
+    let editExerciseCounter = 0; // For adding new exercises to the edit form
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchWorkouts();
+        document.getElementById('addWorkoutForm').addEventListener('submit', addWorkout);
+        document.getElementById('addExerciseBtn').addEventListener('click', addExerciseField);
+
+        // Edit modal functionality
+        const modal = document.getElementById('editWorkoutModal');
+        const closeButton = document.querySelector('.close-button');
+        closeButton.addEventListener('click', () => modal.style.display = 'none');
+        window.addEventListener('click', (event) => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+        document.getElementById('editWorkoutForm').addEventListener('submit', updateWorkout);
+        document.getElementById('addEditExerciseBtn').addEventListener('click', addEditExerciseField);
+    });
+
+    async function fetchWorkouts() {
+        const workoutsList = document.getElementById('workoutsList');
+        workoutsList.innerHTML = '<p>Loading workouts...</p>';
+        try {
+            const response = await fetch('/api/workouts');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const workouts = await response.json();
+            renderWorkouts(workouts);
+        } catch (error) {
+            console.error('Error fetching workouts:', error);
+            workoutsList.innerHTML = '<p style="color: red;">Failed to load workouts. Is the backend running?</p>';
+        }
+    }
+
+    function renderWorkouts(workouts) {
+        const workoutsList = document.getElementById('workoutsList');
+        workoutsList.innerHTML = '';
+        if (workouts.length === 0) {
+            workoutsList.innerHTML = '<p>No workouts found. Add one above!</p>';
+            return;
+        }
+
+        workouts.forEach(workout => {
+            const workoutDiv = document.createElement('div');
+            workoutDiv.className = 'workout-item';
+            workoutDiv.innerHTML = `
+                    <h3>${workout.name} (${workout.date})</h3>
+                    <p>Duration: ${workout.duration} minutes</p>
+                    <h4>Exercises:</h4>
+                    <ul id="exercises-${workout.id}">
+                        ${workout.exercises.map(ex => `
+                            <li>${ex.name} - ${ex.sets} sets x ${ex.reps} reps @ ${ex.weight}kg</li>
+                        `).join('')}
+                    </ul>
+                    <button class="edit-btn" onclick="openEditModal(${workout.id})">Edit</button>
+                    <button class="delete-btn" onclick="deleteWorkout(${workout.id})">Delete</button>
+                `;
+            workoutsList.appendChild(workoutDiv);
+        });
+    }
+
+    function addExerciseField() {
+        const container = document.getElementById('exercisesContainer');
+        const newExerciseDiv = document.createElement('div');
+        newExerciseDiv.className = 'exercise-fields';
+        newExerciseDiv.innerHTML = `
+                <h4>Exercise ${exerciseCounter + 1}</h4>
+                <div>
+                    <label for="exerciseName_${exerciseCounter}">Name:</label>
+                    <input type="text" class="exercise-name" id="exerciseName_${exerciseCounter}" required>
+                </div>
+                <div>
+                    <label for="exerciseSets_${exerciseCounter}">Sets:</label>
+                    <input type="number" class="exercise-sets" id="exerciseSets_${exerciseCounter}" min="1" required>
+                </div>
+                <div>
+                        <label for="exerciseReps_${exerciseCounter}">Reps:</label>
+                        <input type="number" class="exercise-reps" id="exerciseReps_${exerciseCounter}" min="1" required>
+                    </div>
+                    <div>
+                        <label for="exerciseWeight_${exerciseCounter}">Weight:</label>
+                        <input type="number" class="exercise-weight" id="exerciseWeight_${exerciseCounter}" min="0" step="0.1" required>
+                    </div>
+                    <button type="button" onclick="this.parentNode.remove()">Remove Exercise</button>
+                `;
+        container.appendChild(newExerciseDiv);
+        exerciseCounter++;
+    }
+
+    function addEditExerciseField() {
+        const container = document.getElementById('editExercisesContainer');
+        const newExerciseDiv = document.createElement('div');
+        newExerciseDiv.className = 'exercise-fields';
+        newExerciseDiv.innerHTML = `
+                <h4>New Exercise</h4>
+                <div>
+                    <label for="editExerciseName_${editExerciseCounter}">Name:</label>
+                    <input type="text" class="edit-exercise-name" id="editExerciseName_${editExerciseCounter}" required>
+                </div>
+                <div>
+                    <label for="editExerciseSets_${editExerciseCounter}">Sets:</label>
+                    <input type="number" class="edit-exercise-sets" id="editExerciseSets_${editExerciseCounter}" min="1" required>
+                </div>
+                <div>
+                    <label for="editExerciseReps_${editExerciseCounter}">Reps:</label>
+                    <input type="number" class="edit-exercise-reps" id="editExerciseReps_${editExerciseCounter}" min="1" required>
+                </div>
+                <div>
+                    <label for="editExerciseWeight_${editExerciseCounter}">Weight:</label>
+                    <input type="number" class="edit-exercise-weight" id="editExerciseWeight_${editExerciseCounter}" min="0" step="0.1" required>
+                </div>
+                <button type="button" onclick="this.parentNode.remove()">Remove Exercise</button>
+            `;
+        container.appendChild(newExerciseDiv);
+        editExerciseCounter++;
+    }
+
+
+    async function addWorkout(event) {
+        event.preventDefault();
+
+        const workoutName = document.getElementById('workoutName').value;
+        const workoutDate = document.getElementById('workoutDate').value;
+        const workoutDuration = parseInt(document.getElementById('workoutDuration').value);
+
+        const exercises = [];
+        document.querySelectorAll('#exercisesContainer .exercise-fields').forEach(exerciseDiv => {
+            const name = exerciseDiv.querySelector('.exercise-name').value;
+            const sets = parseInt(exerciseDiv.querySelector('.exercise-sets').value);
+            const reps = parseInt(exerciseDiv.querySelector('.exercise-reps').value);
+            const weight = parseFloat(exerciseDiv.querySelector('.exercise-weight').value);
+            exercises.push({ name, sets, reps, weight });
+        });
+
+        const newWorkout = {
+            name: workoutName,
+            date: workoutDate,
+            duration: workoutDuration,
+            exercises: exercises
+        };
+
+        try {
+            const response = await fetch('/api/workouts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newWorkout)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                alert('Error adding workout: ' + JSON.stringify(errorData));
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            document.getElementById('addWorkoutForm').reset();
+            document.getElementById('exercisesContainer').innerHTML = `
+                    <div class="exercise-fields">
+                        <h4>Exercise 1</h4>
+                        <div>
+                            <label for="exerciseName_0">Name:</label>
+                            <input type="text" class="exercise-name" id="exerciseName_0" required>
+                        </div>
+                        <div>
+                            <label for="exerciseSets_0">Sets:</label>
+                            <input type="number" class="exercise-sets" id="exerciseSets_0" min="1" required>
+                        </div>
+                        <div>
+                            <label for="exerciseReps_0">Reps:</label>
+                            <input type="number" class="exercise-reps" id="exerciseReps_0" min="1" required>
+                        </div>
+                        <div>
+                            <label for="exerciseWeight_0">Weight:</label>
+                            <input type="number" class="exercise-weight" id="exerciseWeight_0" min="0" step="0.1" required>
+                        </div>
+                    </div>
+                `;
+            exerciseCounter = 1;
+            fetchWorkouts();
+        } catch (error) {
+            console.error('Error adding workout:', error);
+        }
+    }
+
+    async function deleteWorkout(id) {
+        if (!confirm('Are you sure you want to delete this workout?')) {
+            return;
+        }
+        try {
+            const response = await fetch(`/api/workouts/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            fetchWorkouts();
+        } catch (error) {
+            console.error('Error deleting workout:', error);
+            alert('Failed to delete workout.');
+        }
+    }
+
+    async function openEditModal(id) {
+        try {
+            const response = await fetch(`/api/workouts/${id}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const workout = await response.json();
+
+            document.getElementById('editWorkoutId').value = workout.id;
+            document.getElementById('editWorkoutName').value = workout.name;
+            document.getElementById('editWorkoutDate').value = workout.date;
+            document.getElementById('editWorkoutDuration').value = workout.duration;
+
+            const editExercisesContainer = document.getElementById('editExercisesContainer');
+            editExercisesContainer.innerHTML = ''; // Clear previous exercises
+            editExerciseCounter = 0;
+
+            workout.exercises.forEach((ex, index) => {
+                const newExerciseDiv = document.createElement('div');
+                newExerciseDiv.className = 'exercise-fields';
+                newExerciseDiv.innerHTML = `
+                        <h4>Exercise ${index + 1}</h4>
+                        <div>
+                            <label for="editExerciseName_${editExerciseCounter}">Name:</label>
+                            <input type="text" class="edit-exercise-name" id="editExerciseName_${editExerciseCounter}" value="${ex.name}" required>
+                        </div>
+                        <div>
+                            <label for="editExerciseSets_${editExerciseCounter}">Sets:</label>
+                            <input type="number" class="edit-exercise-sets" id="editExerciseSets_${editExerciseCounter}" value="${ex.sets}" min="1" required>
+                        </div>
+                        <div>
+                            <label for="editExerciseReps_${editExerciseCounter}">Reps:</label>
+                            <input type="number" class="edit-exercise-reps" id="editExerciseReps_${editExerciseCounter}" value="${ex.reps}" min="1" required>
+                        </div>
+                        <div>
+                            <label for="editExerciseWeight_${editExerciseCounter}">Weight:</label>
+                            <input type="number" class="edit-exercise-weight" id="editExerciseWeight_${editExerciseCounter}" value="${ex.weight}" min="0" step="0.1" required>
+                        </div>
+                        <button type="button" onclick="this.parentNode.remove()">Remove Exercise</button>
+                    `;
+                editExercisesContainer.appendChild(newExerciseDiv);
+                editExerciseCounter++;
+            });
+
+            document.getElementById('editWorkoutModal').style.display = 'block';
+
+        } catch (error) {
+            console.error('Error opening edit modal:', error);
+            alert('Failed to load workout for editing.');
+        }
+    }
+
+    async function updateWorkout(event) {
+        event.preventDefault();
+
+        const workoutId = document.getElementById('editWorkoutId').value;
+        const workoutName = document.getElementById('editWorkoutName').value;
+        const workoutDate = document.getElementById('editWorkoutDate').value;
+        const workoutDuration = parseInt(document.getElementById('editWorkoutDuration').value);
+
+        const exercises = [];
+        document.querySelectorAll('#editExercisesContainer .exercise-fields').forEach(exerciseDiv => {
+            const name = exerciseDiv.querySelector('.edit-exercise-name').value;
+            const sets = parseInt(exerciseDiv.querySelector('.edit-exercise-sets').value);
+            const reps = parseInt(exerciseDiv.querySelector('.edit-exercise-reps').value);
+            const weight = parseFloat(exerciseDiv.querySelector('.edit-exercise-weight').value);
+            exercises.push({ name, sets, reps, weight });
+        });
+
+        const updatedWorkout = {
+            id: workoutId, // Ensure ID is included for PUT request
+            name: workoutName,
+            date: workoutDate,
+            duration: workoutDuration,
+            exercises: exercises
+        };
+
+        try {
+            const response = await fetch(`/api/workouts/${workoutId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedWorkout)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                alert('Error updating workout: ' + JSON.stringify(errorData));
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            document.getElementById('editWorkoutModal').style.display = 'none';
+            fetchWorkouts();
+        } catch (error) {
+            console.error('Error updating workout:', error);
+        }
+    }
+</script>
 </body>
 </html>
